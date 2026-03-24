@@ -1,28 +1,123 @@
-# Library Management System in C++
-# Project Overview:
-The Library Management System is a console-based application developed in C++ that allows admins and students to manage library resources effectively. The system enables students to access the library data by registering or logging in to their accounts. Admins have the ability to manage the books and students' accounts. The system supports adding, editing, and viewing books, as well as managing student accounts, issuing books, and handling fines.
+# Library Management System
 
-# Key Features:
-User Authentication: The system provides a login option for both admins and students, protected by a password.
+A simple, console-based library management system in C++.
 
-# Admin Functions:
-  1. Add a book to the system: The admin can add new books to the library.
-  2. Edit the details of the book: The admin can edit the title and author of a book using its ISBN number.
-  3. View the status of books: The admin can view the list and availability of books in the library.
-  4. View enrolled students: The admin can view the list of students registered in the system, sorted by their roll numbers.
-  5. View student balance: The admin can view the account balance of a specific student.
+## Overview
 
-# Student Functions:
-  1. Create an account: A new student can register by providing their roll number, name, and initial deposit.
-  2. View balance: Students can view their account balance.
-  3. Deposit amount: Students can deposit money into their accounts.
-  4. Issue a book: Students can issue books from the list of available books.
+This program allows:
 
-Account management: The system supports up to 20 students, who pay $20 for account opening and $30 as a security deposit. Students can issue any book for $2 for a 10-day period. Fines are imposed for late returns as per the specified rules.
+- **Students** to browse, borrow, and return books
+- **Admins** to manage books and view students
 
-Data storage: The system uses 2D arrays to store the details of students and books. Initially, 15 books are stored in the library. Each student account contains the roll number, balance, and first name.
+## Login
 
-# Implementation Details:
-The application is implemented in C++ without using classes, pointers, or structures. It employs 2D arrays, functions, loops, if-else, and switch operators to achieve the desired functionality. The main() function handles user inputs, presents options to the user, and calls appropriate functions based on the selected options. The program runs in a loop until the user decides to exit.
+- **Admin**: Enter `999`
+- **Student**: Enter your student ID
+- **Exit**: Enter `0`
 
-This project is suitable for students who have completed a Programming Fundamentals course or lab and want to demonstrate their skills in C++ programming without using advanced concepts like classes or pointers. It provides a solid foundation for further learning and improvement in C++ and software development.
+## Features
+
+### Admin Menu
+
+| Option | Action                                  |
+| ------ | --------------------------------------- |
+| 1      | View all books (shows who borrowed)     |
+| 2      | Add a new book                          |
+| 3      | View all students (with borrowed books) |
+| 0      | Back to main menu                       |
+
+### Student Menu
+
+| Option | Action                 |
+| ------ | ---------------------- |
+| 1      | Browse available books |
+| 2      | Borrow a book          |
+| 3      | Return a book          |
+| 0      | Back to main menu      |
+
+## Data Storage
+
+Data is stored in text files and persists between sessions:
+
+- `users.txt` - Student records (format: `id|name`)
+- `books.txt` - Book records (format: `id|title|author|borrowed_by`)
+
+The `borrowed_by` field stores the student ID who borrowed the book, or `0` if available.
+
+## Code Structure
+
+```
+main.cpp
+├── Constants
+│   └── ADMIN_ID (999)
+│
+├── Data Structures
+│   ├── Student (id, name)
+│   └── Book (id, title, author, borrowed_by)
+│
+├── Global Data
+│   ├── students vector
+│   └── books vector
+│
+├── File I/O
+│   ├── save()     - Write data to files
+│   └── load()     - Read data from files
+│
+├── Helper Functions
+│   ├── next_book_id()    - Generate next book ID
+│   ├── find_student()    - Find student by ID
+│   ├── find_book()       - Find book by ID
+│   └── get_int_input()   - Safe integer input
+│
+├── Display Functions
+│   ├── display_borrowed_books()  - Show student's books
+│   ├── display_all_books()       - Show all books with status
+│   ├── display_all_students()    - Show all students
+│   └── display_available_books() - Show only available books
+│
+├── Admin Functions
+│   ├── add_book()      - Add new book
+│   └── admin_menu()    - Admin menu loop
+│
+├── Student Functions
+│   ├── issue_book()    - Borrow a book
+│   ├── return_book()   - Return a book
+│   └── student_menu()  - Student menu loop
+│
+└── Main
+    └── main() - Program entry point
+```
+
+## Changes from Original
+
+| Feature                         | Original         | Current                              |
+| ------------------------------- | ---------------- | ------------------------------------ |
+| Password login                  | Yes              | No (ID only)                         |
+| Balance system                  | Yes              | No                                   |
+| ISBN                            | Yes              | No (replaced with auto-generated ID) |
+| Data storage                    | Arrays in memory | Text files (persistent)               |
+| Book ID                         | N/A              | Auto-generated                       |
+| Multiple borrows                | No               | Yes                                  |
+| Borrowing persistence           | No               | Yes                                  |
+| Student can view borrowed books | No               | Yes                                  |
+| Admin can view borrower         | No               | Yes                                  |
+| Search books                    | Yes              | No (removed to simplify)             |
+| Edit book                       | Yes              | No (removed to simplify)             |
+| Code size                       | ~500 lines       | ~250 lines                           |
+
+## Sample Data
+
+### Default Books
+
+1. The Great Gatsby - F. Scott Fitzgerald
+2. To Kill a Mockingbird - Harper Lee
+3. 1984 - George Orwell
+4. Pride and Prejudice - Jane Austen
+5. The Catcher in the Rye - J.D. Salinger
+   ... (15 total)
+
+### Sample Students
+
+- 20251 - John Smith
+- 20255 - Jane Doe
+- 20234 - Alice Johnson

@@ -1,312 +1,378 @@
+// ============================================
+// LIBRARY MANAGEMENT SYSTEM
+// A simple system for managing books and students
+// ============================================
+
+#include <fstream>
 #include <iostream>
-#include <cstring>
-#include <iomanip>
+#include <string>
+#include <vector>
 
-using namespace std;
+// CONSTANTS
 
-// Constants
-const int MAX_STUDENTS = 20;
-const int MAX_BOOKS = 15;
-const int MAX_NAME_LENGTH = 50;
+constexpr int ADMIN_ID = 999;
 
-// Global variables
-int student_count = 0;
-int book_count = 0;
-double student_balance[MAX_STUDENTS];
-int student_roll[MAX_STUDENTS];
-char student_name[MAX_STUDENTS][MAX_NAME_LENGTH];
-char book_title[MAX_BOOKS][MAX_NAME_LENGTH];
-char book_author[MAX_BOOKS][MAX_NAME_LENGTH];
-int book_isbn[MAX_BOOKS];
-bool book_available[MAX_BOOKS];
+// DATA STRUCTURES
 
-// Function prototypes
-void create_account();
-void display(int roll);
-void deposit_amount(int roll, double amount);
-void issue_item(int roll);
-void display_sorted();
-int find_student(int roll);
-int find_book(int isbn);
-void add_book();
-void edit_book();
-void view_books();
+struct Student {
+  int id;
+  std::string name;
+};
 
-int main() {
-    // Initialization
-    // Add initial 15 books to the library
-    // TODO: Replace with actual book data
-    for (int i = 0; i < MAX_BOOKS; i++) {
-        strcpy(book_title[i], "Title");
-        strcpy(book_author[i], "Author");
-        book_isbn[i] = i + 1000;
-        book_available[i] = true;
+struct Book {
+  int id;
+  std::string title;
+  std::string author;
+  int borrowed_by = 0; // 0 means available
+};
+
+// GLOBAL DATA
+
+std::vector<Student> students;
+std::vector<Book> books;
+
+// FILE I/O
+
+void save() {
+  // Save students (format: id|name)
+  std::ofstream user_file("users.txt");
+  for (auto &s : students) {
+    user_file << s.id << "|" << s.name << "\n";
+  }
+
+  // Save books (format: id|title|author|borrowed_by)
+  std::ofstream book_file("books.txt");
+  for (auto &b : books) {
+    book_file << b.id << "|" << b.title << "|" << b.author << "|" << b.borrowed_by << "\n";
+  }
+}
+
+void load() {
+  // Load students
+  std::ifstream user_file("users.txt");
+  std::string line;
+
+  while (getline(user_file, line)) {
+    if (line.empty())
+      continue;
+
+    int pipe_pos = line.find("|");
+    if (pipe_pos == std::string::npos)
+      continue;
+
+    Student s;
+    s.id = stoi(line.substr(0, pipe_pos));
+    s.name = line.substr(pipe_pos + 1);
+    students.push_back(s);
+  }
+
+  // Load books
+  std::ifstream book_file("books.txt");
+
+  while (getline(book_file, line)) {
+    if (line.empty())
+      continue;
+
+    int first_pipe = line.find("|");
+    int second_pipe = line.find("|", first_pipe + 1);
+    int third_pipe = line.find("|", second_pipe + 1);
+
+    if (first_pipe == std::string::npos || second_pipe == std::string::npos)
+      continue;
+
+    Book b;
+    b.id = stoi(line.substr(0, first_pipe));
+    b.title = line.substr(first_pipe + 1, second_pipe - first_pipe - 1);
+    b.author = line.substr(second_pipe + 1, third_pipe - second_pipe - 1);
+    
+    // If borrowed_by field exists, parse it
+    if (third_pipe != std::string::npos) {
+      b.borrowed_by = stoi(line.substr(third_pipe + 1));
+    } else {
+      b.borrowed_by = 0; // Default to available
     }
-    book_count = MAX_BOOKS;
-
-    int option;
-    bool is_admin;
-    string password;
-
-    while (true) {
-        cout << "Login as:\n1. Admin\n2. Student\n0. Exit\n";
-        cin >> option;
-
-        if (option == 0) {
-            break;
-        }
-
-        is_admin = (option == 1);
-
-        cout << "Enter password: ";
-        cin >> password;
-
-        if (password == "password") { // Use a simple password for demonstration purposes.
-            if (is_admin) {
-                cout << "Admin options:\n1. Add book\n2. Edit book\n3. View book status\n4. View enrolled students\n5. View student balance\n";
-                cin >> option;
-
-                switch (option) {
-                    case 1: {
-                        add_book();
-                        break;
-                    }
-                    case 2: {
-                        edit_book();
-                        break;
-                    }
-                    case 3: {
-                        view_books();
-                        break;
-                    }
-                    case 4: {
-                        display_sorted();
-                        break;
-                    }
-                    case 5: {
-                        int roll;
-                        cout << "Enter student roll number: ";
-                        cin >> roll;
-                        display(roll);
-                        break;
-                    }
-                }
-            } else {
-                int roll;
-                cout << "Enter your roll number: ";
-                cin >> roll;
-
-                int index = find_student(roll);
-                if (index == -1) {
-                    cout << "Student not found. Create an account? (1. Yes / 2. No): ";
-                    cin >> option;
-                    if (option == 1) {
-                        create_account();
-                    }
-                } else {
-                    cout << "Student options:\n1. View balance\n2. Deposit amount\n3. Issue item\n";
-                    cin >> option;
-
-                    switch (option) {
-                        case 1: {
-                            display(roll);
-                            break;
-                        }
-                        case 2: {
-                            double amount;
-                            cout << "Enter the amount to deposit: ";
-                            cin >> amount;
-                            deposit_amount(roll, amount);
-                            break;
-                        }
-                        case 3: {
-                            issue_item(roll);
-                            break;
-                        }
-                    }
-                }
-            }
-        } else {
-            cout << "Incorrect password.\n";
-}
-}
-return 0;
+    
+    books.push_back(b);
+  }
 }
 
-void create_account() {
-if (student_count >= MAX_STUDENTS) {
-cout << "Student limit reached. Cannot create more accounts.\n";
-return;
+// HELPER FUNCTIONS
+
+int next_book_id() {
+  if (books.empty())
+    return 1;
+  return books.back().id + 1;
 }
 
-int roll;
-cout << "Enter roll number (BBRRRR format): ";
-cin >> roll;
-
-if (find_student(roll) != -1) {
-    cout << "Account already exists for this roll number.\n";
-    return;
+int find_student(int id) {
+  for (int i = 0; i < students.size(); i++) {
+    if (students[i].id == id)
+      return i;
+  }
+  return -1;
 }
 
-student_roll[student_count] = roll;
-cout << "Enter student name: ";
-cin.ignore();
-cin.getline(student_name[student_count], MAX_NAME_LENGTH);
-
-double initial_deposit;
-cout << "Enter initial deposit amount ($50 minimum): ";
-cin >> initial_deposit;
-
-if (initial_deposit < 50) {
-    cout << "Initial deposit must be at least $50.\n";
-    return;
+int find_book(int id) {
+  for (int i = 0; i < books.size(); i++) {
+    if (books[i].id == id)
+      return i;
+  }
+  return -1;
 }
 
-student_balance[student_count] = initial_deposit - 20 - 30; // Account opening and security deposit
-student_count++;
+int get_int_input() {
+  int value;
+  if (!(std::cin >> value)) {
+    std::cin.clear();
+    std::cin.ignore(1000, '\n');
+    return -1;
+  }
+  return value;
 }
 
-void display(int roll) {
-int index = find_student(roll);
-if (index == -1) {
-    cout << "Student not found.\n";
-    return;
-}
+// DISPLAY FUNCTIONS
 
-cout << "Roll No: " << student_roll[index] << endl;
-cout << "Name: " << student_name[index] << endl;
-cout << "Balance: $" << fixed << setprecision(2) << student_balance[index] << endl;
-}
+void display_borrowed_books(int student_id) {
+  std::cout << "\nMy borrowed books:\n";
 
-void deposit_amount(int roll, double amount) {
-int index = find_student(roll);
-if (index == -1) {
-    cout << "Student not found.\n";
-    return;
-}
-
-student_balance[index] += amount;
-cout << "New balance: $" << fixed << setprecision(2) << student_balance[index] << endl;
-}
-
-void issue_item(int roll) {
-int index = find_student(roll);
-if (index == -1) {
-    cout << "Student not found.\n";
-    return;
-}
-
-cout << "Available books:\n";
-for (int i = 0; i < book_count; i++) {
-    if (book_available[i]) {
-        cout << i + 1 << ". " << book_title[i] << " by " << book_author[i] << " (ISBN: " << book_isbn[i] << ")\n";
+  bool has_borrowed = false;
+  for (auto &b : books) {
+    if (b.borrowed_by == student_id) {
+      std::cout << "  [" << b.id << "] " << b.title << "\n";
+      has_borrowed = true;
     }
+  }
+
+  if (!has_borrowed) {
+    std::cout << "  None\n";
+  }
 }
 
-int choice;
-cout << "Enter the number of the book you want to issue (0 to cancel): ";
-cin >> choice;
+void display_all_books() {
+  std::cout << "\nBooks:\n";
 
-if (choice == 0) {
-    return;
-}
+  for (auto &b : books) {
+    std::cout << "[" << b.id << "] " << b.title << " by " << b.author;
 
-if (book_available[choice - 1] && student_balance[index] >= 2) {
-    book_available[choice - 1] = false;
-    student_balance[index] -= 2;
-    cout << "Book issued successfully. New balance: $" << fixed << setprecision(2) << student_balance[index] << endl;
-} else {
-    cout << "Cannot issue the book. Insufficient balance or book is unavailable.\n";
-}
-}
-
-void display_sorted() {
-for (int i = 0; i < student_count; i++) {
-for (int j = i + 1; j < student_count; j++) {
-if (student_roll[i] > student_roll[j]) {
-swap(student_roll[i], student_roll[j]);
-swap(student_balance[i], student_balance[j]);
-swap(student_name[i], student_name[j]);
-}
-}
+    if (b.borrowed_by == 0) {
+      std::cout << " (available)\n";
+    } else {
+      int student_index = find_student(b.borrowed_by);
+      if (student_index >= 0) {
+        std::cout << " (borrowed by " << students[student_index].name << ")\n";
+      } else {
+        std::cout << " (borrowed)\n";
+      }
+    }
+  }
 }
 
-for (int i = 0; i < student_count; i++) {
-    cout << student_roll[i]<< " - " << student_name[i] << " - Balance: $" << fixed << setprecision(2) << student_balance[i] << endl;
-}
+void display_all_students() {
+  std::cout << "\nStudents:\n";
+
+  for (auto &s : students) {
+    std::cout << s.id << " - " << s.name << "\n";
+
+    for (auto &b : books) {
+      if (b.borrowed_by == s.id) {
+        std::cout << "  Borrowed: " << b.title << "\n";
+      }
+    }
+  }
 }
 
-int find_student(int roll) {
-for (int i = 0; i < student_count; i++) {
-if (student_roll[i] == roll) {
-return i;
-}
-}
-return -1;
+void display_available_books() {
+  std::cout << "\nAvailable books:\n";
+
+  for (auto &b : books) {
+    if (b.borrowed_by == 0) {
+      std::cout << "[" << b.id << "] " << b.title << " by " << b.author << "\n";
+    }
+  }
 }
 
-int find_book(int isbn) {
-for (int i = 0; i < book_count; i++) {
-if (book_isbn[i] == isbn) {
-return i;
-}
-}
-return -1;
-}
-
+// ADMIN FUNCTIONS
 void add_book() {
-if (book_count >= MAX_BOOKS) {
-cout << "Book limit reached. Cannot add more books.\n";
-return;
+  Book new_book;
+  new_book.id = next_book_id();
+
+  std::cout << "Title: ";
+  std::cin.ignore();
+  getline(std::cin, new_book.title);
+
+  std::cout << "Author: ";
+  getline(std::cin, new_book.author);
+
+  books.push_back(new_book);
+  save();
+
+  std::cout << "Book added!\n";
 }
-cout << "Enter book title: ";
-cin.ignore();
-cin.getline(book_title[book_count], MAX_NAME_LENGTH);
 
-cout << "Enter book author: ";
-cin.getline(book_author[book_count], MAX_NAME_LENGTH);
+// UI for Admin
+void admin_menu() {
+  while (true) {
+    std::cout << "\n--- Admin ---\n";
+    std::cout << "1. Books  2. Add book  3. Students  0. Back\n";
+    std::cout << "Choice: ";
 
-int isbn;
-cout << "Enter book ISBN: ";
-cin >> isbn;
+    int choice = get_int_input();
 
-if (find_book(isbn) != -1) {
-    cout << "A book with this ISBN already exists.\n";
+    if (choice < 0) {
+      std::cout << "Invalid input.\n";
+      continue;
+    }
+
+    switch (choice) {
+    case 0:
+      return;
+
+    case 1:
+      display_all_books();
+      break;
+
+    case 2:
+      add_book();
+      break;
+
+    case 3:
+      display_all_students();
+      break;
+
+    default:
+      std::cout << "Invalid choice.\n";
+    }
+  }
+}
+
+// STUDENT FUNCTIONS
+
+void issue_book(int student_id) {
+  std::cout << "Book ID to issue: ";
+  int book_id = get_int_input();
+
+  if (book_id < 0) {
+    std::cout << "Invalid ID.\n";
     return;
-}
+  }
 
-book_isbn[book_count] = isbn;
-book_available[book_count] = true;
-book_count++;
-}
+  int book_index = find_book(book_id);
 
-void edit_book() {
-int isbn;
-cout << "Enter book ISBN to edit: ";
-cin >> isbn;
-int index = find_book(isbn);
-if (index == -1) {
-    cout << "Book not found.\n";
+  if (book_index < 0 || books[book_index].borrowed_by != 0) {
+    std::cout << "Not available.\n";
     return;
+  }
+
+  books[book_index].borrowed_by = student_id;
+  save();
+  std::cout << "Issued: " << books[book_index].title << "\n";
 }
 
-cout << "Current book title: " << book_title[index] << endl;
-cout << "Enter new book title: ";
-cin.ignore();
-cin.getline(book_title[index], MAX_NAME_LENGTH);
+void return_book(int student_id) {
+  std::cout << "Book ID to return: ";
+  int book_id = get_int_input();
 
-cout << "Current book author: " << book_author[index] << endl;
-cout << "Enter new book author: ";
-cin.getline(book_author[index], MAX_NAME_LENGTH);
+  if (book_id < 0) {
+    std::cout << "Invalid ID.\n";
+    return;
+  }
 
-cout << "Book details updated.\n";
+  int book_index = find_book(book_id);
+
+  if (book_index < 0 || books[book_index].borrowed_by != student_id) {
+    std::cout << "You didn't borrow this book.\n";
+    return;
+  }
+
+  books[book_index].borrowed_by = 0;
+  save();
+  std::cout << "Returned: " << books[book_index].title << "\n";
 }
 
-void view_books() {
-for (int i = 0; i < book_count; i++) {
-cout << "Title: " << book_title[i] << endl;
-cout << "Author: " << book_author[i] << endl;
-cout << "ISBN: " << book_isbn[i] << endl;
-cout << "Available: " << (book_available[i] ? "Yes" : "No") << endl << endl;
+// UI for Student
+void student_menu(int student_id) {
+  while (true) {
+    display_borrowed_books(student_id);
+
+    std::cout << "\n--- Student Menu ---\n";
+    std::cout << "1. Browse books  2. Issue  3. Return  0. Back\n";
+    std::cout << "Choice: ";
+
+    int choice = get_int_input();
+
+    if (choice < 0) {
+      std::cout << "Invalid input.\n";
+      continue;
+    }
+
+    switch (choice) {
+    case 0:
+      return;
+
+    case 1:
+      display_available_books();
+      break;
+
+    case 2:
+      issue_book(student_id);
+      break;
+
+    case 3:
+      return_book(student_id);
+      break;
+
+    default:
+      std::cout << "Invalid choice.\n";
+    }
+  }
 }
+
+// MAIN
+int main() {
+  load();
+
+  while (true) {
+    std::cout << "\nLibrary System\n";
+    std::cout << "ID (999=Admin, 0=Exit): ";
+
+    int id = get_int_input();
+
+    if (id < 0) {
+      std::cout << "Please enter a valid number.\n";
+      continue;
+    }
+
+    if (id == 0)
+      break;
+
+    if (id == ADMIN_ID) {
+      admin_menu();
+      continue;
+    }
+
+    int student_index = find_student(id);
+
+    if (student_index < 0) {
+      std::cout << "Not found. Register? (y/n): ";
+      char confirm;
+      std::cin >> confirm;
+      std::cin.ignore();
+
+      if (confirm == 'y' || confirm == 'Y') {
+        Student new_student;
+        new_student.id = id;
+
+        std::cout << "Name: ";
+        getline(std::cin, new_student.name);
+
+        students.push_back(new_student);
+        save();
+        std::cout << "Registered!\n";
+      }
+    } else {
+      student_menu(id);
+    }
+  }
+
+  return 0;
 }
